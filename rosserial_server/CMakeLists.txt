@@ -15,6 +15,16 @@ find_package(std_msgs REQUIRED)
 find_package(std_srvs REQUIRED)
 find_package(rosserial_msgs REQUIRED)
 
+find_path(RAPIDJSON_INCLUDE_DIR NAMES rapidjson/rapidjson.h)
+
+if(NOT RAPIDJSON_INCLUDE_DIR)
+  message(FATAL_ERROR
+    "RapidJSON headers are missing. Install dependencies from the workspace "
+    "root with: rosdep install --from-paths src --ignore-src -y\n"
+    "On Ubuntu/Debian: sudo apt install rapidjson-dev"
+  )
+endif()
+
 find_package(Boost REQUIRED COMPONENTS
   system
   thread
@@ -33,6 +43,9 @@ include_directories(
 #target_include_directories(${PROJECT_NAME}_lookup SYSTEM PRIVATE ${PYTHON_INCLUDE_DIR})
 
 add_executable(${PROJECT_NAME}_serial_node src/serial_node.cpp src/msg_lookup.cpp)
+target_include_directories(${PROJECT_NAME}_serial_node
+  SYSTEM PRIVATE "${RAPIDJSON_INCLUDE_DIR}"
+)
 target_link_libraries(${PROJECT_NAME}_serial_node ${Boost_LIBRARIES})
 set_target_properties(${PROJECT_NAME}_serial_node PROPERTIES OUTPUT_NAME serial_node PREFIX "")
 ament_target_dependencies(${PROJECT_NAME}_serial_node rclcpp std_msgs std_srvs rosserial_msgs ament_index_cpp)
