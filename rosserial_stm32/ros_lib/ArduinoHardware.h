@@ -120,7 +120,7 @@ class ArduinoHardware {
     }
 
     int read(){return iostream->read();};
-    void write(uint8_t* data, int length){
+    void write(const uint8_t* data, int length){
       iostream->write(data, length);
     }
 
