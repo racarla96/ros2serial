@@ -40,52 +40,65 @@
 #include "ros/publisher.h"
 #include "ros/subscriber.h"
 
+using namespace rosserial_msgs::msg;
+
 namespace ros
 {
 
-template<typename MReq , typename MRes>
+template<typename ServiceT>
 class ServiceClient : public Subscriber_
 {
 public:
+
   ServiceClient(const char* topic_name) :
-    pub(topic_name, &req, rosserial_msgs::msg::TopicInfo::ID_SERVICE_CLIENT + rosserial_msgs::msg::TopicInfo::ID_PUBLISHER)
+    pub(topic_name, &req, TopicInfo::ID_SERVICE_CLIENT + TopicInfo::ID_PUBLISHER)
   {
     this->topic_ = topic_name;
     this->waiting = true;
   }
 
-  virtual void call(const MReq & request, MRes & response) override
+  bool call(const typename ServiceT::Request & request, typename ServiceT::Response & response)
   {
-    if (!pub.nh_->connected()) return;
+    if (!pub.nh_->connected())
+        return false;
+
     ret = &response;
     waiting = true;
     pub.publish(&request);
-    while (waiting && pub.nh_->connected())
-      if (pub.nh_->spinOnce() < 0) break;
+    while (waiting && pub.nh_->connected()) {
+      if (pub.nh_->spinOnce() < 0) {
+        return false;
+      }
+    }
+
+    return !waiting && pub.nh_->connected();
   }
 
   // these refer to the subscriber
-  virtual void callback(unsigned char *data) override
+  virtual void callback(ucdrBuffer *data) override
   {
-    ret->deserialize(data);
+    ret->cdr_deserialize(data);
     waiting = false;
   }
+
   virtual const char * getMsgType() override
   {
     return this->resp.getType();
   }
+  
   virtual const char * getMsgMD5() override
   {
     return this->resp.getMD5();
   }
+
   virtual int getEndpointType() override
   {
     return rosserial_msgs::msg::TopicInfo::ID_SERVICE_CLIENT + rosserial_msgs::msg::TopicInfo::ID_SUBSCRIBER;
   }
 
-  MReq req;
-  MRes resp;
-  MRes * ret;
+  typename ServiceT::Request req;
+  typename ServiceT::Response resp;
+  typename ServiceT::Response * ret;
   bool waiting;
   Publisher pub;
 };

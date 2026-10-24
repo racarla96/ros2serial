@@ -43,11 +43,11 @@
 namespace ros
 {
 
-template<typename MReq , typename MRes, typename ObjT = void>
+template<typename ServiceT, typename ObjT = void>
 class ServiceServer : public Subscriber_
 {
 public:
-  typedef void(ObjT::*CallbackT)(const MReq&,  MRes&);
+  typedef void(ObjT::*CallbackT)(const typename ServiceT::Request&,  typename ServiceT::Response&);
 
   ServiceServer(const char* topic_name, CallbackT cb, ObjT* obj) :
     pub(topic_name, &resp, rosserial_msgs::msg::TopicInfo::ID_SERVICE_SERVER + rosserial_msgs::msg::TopicInfo::ID_PUBLISHER),
@@ -58,9 +58,9 @@ public:
   }
 
   // these refer to the subscriber
-  virtual void callback(unsigned char *data) override
+  virtual void callback(ucdrBuffer* data) override
   {
-    req.deserialize(data);
+    req.cdr_deserialize(data);
     (obj_->*cb_)(req, resp);
     pub.publish(&resp);
   }
@@ -77,19 +77,19 @@ public:
     return rosserial_msgs::msg::TopicInfo::ID_SERVICE_SERVER + rosserial_msgs::msg::TopicInfo::ID_SUBSCRIBER;
   }
 
-  MReq req;
-  MRes resp;
+  typename ServiceT::Request req;
+  typename ServiceT::Response resp;
   Publisher pub;
 private:
   CallbackT cb_;
   ObjT* obj_;
 };
 
-template<typename MReq , typename MRes>
-class ServiceServer<MReq, MRes, void> : public Subscriber_
+template<typename ServiceT>
+class ServiceServer<ServiceT, void> : public Subscriber_
 {
 public:
-  typedef void(*CallbackT)(const MReq&,  MRes&);
+  typedef void(*CallbackT)(const typename ServiceT::Request&,  typename ServiceT::Response&);
 
   ServiceServer(const char* topic_name, CallbackT cb) :
     pub(topic_name, &resp, rosserial_msgs::msg::TopicInfo::ID_SERVICE_SERVER + rosserial_msgs::msg::TopicInfo::ID_PUBLISHER)
@@ -99,9 +99,9 @@ public:
   }
 
   // these refer to the subscriber
-  virtual void callback(unsigned char *data) override
+  virtual void callback(ucdrBuffer* data) override
   {
-    req.deserialize(data);
+    req.cdr_deserialize(data);
     cb_(req, resp);
     pub.publish(&resp);
   }
@@ -118,8 +118,8 @@ public:
     return rosserial_msgs::msg::TopicInfo::ID_SERVICE_SERVER + rosserial_msgs::msg::TopicInfo::ID_SUBSCRIBER;
   }
 
-  MReq req;
-  MRes resp;
+  typename ServiceT::Request req;
+  typename ServiceT::Response resp;
   Publisher pub;
 private:
   CallbackT cb_;

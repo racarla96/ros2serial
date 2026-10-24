@@ -205,7 +205,7 @@ public:
     //Serial.println("[spinOnce]");
 
     /* restart if timed out */
-    uint32_t c_time = hardware_.time();
+    const uint32_t c_time = hardware_.time();
     if ((c_time - last_sync_receive_time) > (SYNC_SECONDS * 2200))
     {
         //Serial.println("[spinOnce] configured false");
@@ -472,8 +472,8 @@ public:
   }
 
   /* Register a new Service Server */
-  template<typename MReq, typename MRes, typename ObjT>
-  bool advertiseService(ServiceServer<MReq, MRes, ObjT>& srv)
+  template<typename ServiceT, typename ObjT>
+  bool advertiseService(ServiceServer<ServiceT, ObjT>& srv)
   {
     bool v = advertise(srv.pub);
     bool w = subscribe(srv);
@@ -481,8 +481,8 @@ public:
   }
 
   /* Register a new Service Client */
-  template<typename MReq, typename MRes>
-  bool serviceClient(ServiceClient<MReq, MRes>& srv)
+  template<typename ServiceT>
+  bool serviceClient(ServiceClient<ServiceT>& srv)
   {
     bool v = advertise(srv.pub);
     bool w = subscribe(srv);
@@ -522,7 +522,6 @@ public:
 
   virtual int publish(int id, const Msg * msg) override
   {
-    //// TODO: REMOVE THIS ///////
 #if TEST_MODE    
     return 0;
 #endif    
