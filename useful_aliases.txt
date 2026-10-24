@@ -1,0 +1,2 @@
+alias colcon_build='colcon build --event-handlers console_direct+'
+
