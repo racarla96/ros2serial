@@ -36,15 +36,16 @@
 THIS_PACKAGE = "rosserial_stm32"
 
 __usage__ = """
-make_libraries.py generates the STM32 rosserial library files for SW4STM32.
-It requires the location of your SWSTM32 project folder.
+make_libraries.py generates the ros2serial library files for microcontrollers,
+such as Arduino and STM32. It requires the output location of your project folder.
 
-rosrun rosserial_stm32 make_libraries.py <output_path>
+ros2 run rosserial_stm32 make_libraries <output_path>
 """
 
 from .interfaces import get_interface_spec, get_package_interfaces, get_message_hash, get_service_hash
 from ament_index_python.packages import get_package_share_directory
 from rosidl_pycommon import convert_camel_case_to_lower_case_underscore
+from rosidl_runtime_py import get_interfaces
 import traceback
 import hashlib
 import os, sys, re
@@ -459,7 +460,9 @@ class Service:
         self.req_def = definition[0:sep_line]
         self.resp_def = definition[sep_line+1:]
         """
-        self.req_def, self.resp_def = definition.split("---\n")
+        self.req_def, self.resp_def = re.split(
+            r"^[ \t]*---[ \t]*(?:\r?\n|$)", definition, flags=re.MULTILINE
+        )
 
         self.req = Message(name+"Request", package, self.req_def, md5req)
 
@@ -605,8 +608,16 @@ def MakeLibrary(package: str, output_path: str):
         srv.make_header(header)
         header.close()
 
-
 def make_msg(interface: str, output_path:str):
+    """Helper function to test and verify message generation
+    Args:
+        interface (str): The ROS message interface in the format "package/msg/MessageName".
+        output_path (str): The path where the generated message header should be saved.
+    Returns:
+        None
+    Example:
+        make_msg("std_msgs/msg/Int32", "/path/to/output")
+    """
     message = None
     print("[MSG] ", interface)
     package, _, msg_name = interface.split('/')
@@ -617,6 +628,7 @@ def make_msg(interface: str, output_path:str):
     else:
         err_msg = "Unable to build message: %s/msg/%s\n" % (package, msg_name)
         sys.stderr.write(err_msg)
+        return
 
     msgs_output_path = os.path.join(output_path, package, "msg")
     if not os.path.exists(msgs_output_path):
@@ -625,8 +637,7 @@ def make_msg(interface: str, output_path:str):
     message.make_header(header)
     header.close()
 
-
-def rosserial_generate(pkg_list, path):
+def rosserial_generate(pkg_list: list[str], path: str):
     failed = []
     for p in sorted(pkg_list):
         try:
@@ -643,27 +654,15 @@ def rosserial_generate(pkg_list, path):
         raise Exception("Failed to generate libraries for: " + str(failed))
     print('\n')
 
-def rosserial_client_copy_files(rospack, path):
-    if not os.path.exists(os.path.join(path, "ros")):
-        os.makedirs(os.path.join(path, "ros"))
-    if not os.path.exists(os.path.join(path, "tf")):
-        os.makedirs(os.path.join(path, "tf"))
-    files = ['duration.cpp',
-             'time.cpp',
-             os.path.join('ros', 'duration.h'),
-             os.path.join('ros', 'msg.h'),
-             os.path.join('ros', 'node_handle.h'),
-             os.path.join('ros', 'publisher.h'),
-             os.path.join('ros', 'service_client.h'),
-             os.path.join('ros', 'service_server.h'),
-             os.path.join('ros', 'subscriber.h'),
-             os.path.join('ros', 'time.h'),
-             os.path.join('tf', 'tf.h'),
-             os.path.join('tf', 'transform_broadcaster.h')]
-    mydir = rospack.get_path("rosserial_client")
-    for f in files:
-        shutil.copyfile(os.path.join(mydir, "src", "ros_lib", f), os.path.join(path, f))
+def rosserial_copy_lib(path: str):
+    """Recursively copy ros_lib contents into path, preserving directory structure.
 
+    Merge existing directories and overwrite matching files, keeping other files.
+    """
+    rosserial_stm32_dir = get_package_share_directory(THIS_PACKAGE)
+    shutil.copytree(
+        os.path.join(rosserial_stm32_dir, "ros_lib"), path, dirs_exist_ok=True
+    )
 
 def main(args=None):
     # need correct inputs
@@ -675,48 +674,20 @@ def main(args=None):
     path = sys.argv[1]
     if path[-1] == "/":
         path = path[0:-1]
-    path = path + "/Inc/"
-    #print("\nExporting to %s" % path)
-
-    #rospack = rospkg.RosPack()
-    rospack = None
+    path = path + "/ros2serial_lib/"
 
     # copy ros_lib stuff in
-    """
-    rosserial_stm32_dir = get_package_share_directory(THIS_PACKAGE)
-    files = os.listdir(rosserial_stm32_dir+"/ros_lib")
-    for f in files:
-        if os.path.isfile(rosserial_stm32_dir+"/ros_lib/"+f):
-            shutil.copy(rosserial_stm32_dir+"/ros_lib/"+f, path)
-        else:
-            shutil.copytree(rosserial_stm32_dir+"/ros_lib/"+f, path, dirs_exist_ok = True)
-    """
-
-
-    #rosserial_client_copy_files(rospack, path)
+    rosserial_copy_lib(path)
 
     # generate messages
-    #rosserial_generate(['std_msgs', 'std_srvs'], path)
-    #rosserial_generate(['std_msgs','builtin_interfaces','rosserial_msgs', 'std_srvs', 'introspection_interfaces'], path)
-    rosserial_generate(['std_msgs','builtin_interfaces','rosserial_msgs', 'std_srvs'], path)
-    #rosserial_generate(['introspection_interfaces'], path)
-    #make_msg("std_msgs/msg/Int32", path)
+    interfaces_by_package = get_interfaces()
+    packages = sorted(
+        package
+        for package, interfaces in interfaces_by_package.items()
+        if any(name.startswith(("msg/", "srv/")) for name in interfaces)
+    )
 
-    #interface = "std_msgs/msg/Int32"
-    #interface = sys.argv[2]
-    #package, _, msg_name = interface.split('/')
-    #definition = get_interface_spec(interface)
-    #rihs01_hash = get_message_hash(interface)
-    #message = Message(msg_name, package, definition, rihs01_hash)
-
-    #print("\n====================================")
-    #f = sys.stderr
-    #message._write_msg_includes(f)
-    #message._write_data(f)
-    #message._write_constructor(f)
-    #message._write_deserializer(f)
-    #message.make_header(f)
-
+    rosserial_generate(packages, path)
 
 if __name__ == '__main__':
     main()
