@@ -115,7 +115,7 @@ public:
     using namespace rosserial_msgs::msg;
     using namespace std::placeholders;
 
-    RCLCPP_INFO(node_->get_logger(), "[Rosserial::Session::start] Starting session.");
+    RCLCPP_INFO(node_->get_logger(), "Starting session");
 
     callbacks_[TopicInfo::ID_PUBLISHER] = std::bind(&Session::setup_publisher, this, _1);
     callbacks_[TopicInfo::ID_SUBSCRIBER] = std::bind(&Session::setup_subscriber, this, _1);
@@ -412,7 +412,7 @@ private:
   //// HELPERS ////
   void request_topics() {
     std::vector<uint8_t> message(0);
-    RCLCPP_INFO(node_->get_logger(), "[Rosserial::Session::request_topics] Sending request topics message for VER2 protocol.");
+    RCLCPP_INFO(node_->get_logger(), "Sending request topics message for VER2 protocol");
     write_message(message, rosserial_msgs::msg::TopicInfo::ID_PUBLISHER);
 
     // Set timer for future point at which to verify the subscribers and publishers
@@ -495,7 +495,7 @@ private:
         rclcpp::Serialization<rosserial_msgs::msg::TopicInfo> serializer;
         serializer.deserialize_message(&serialized_msg, &topic_info);
 
-        RCLCPP_INFO(node_->get_logger(), "[Rosserial::Session::setup_publisher] Setting up publisher for topic: %s  message type: %s", topic_info.topic_name.c_str(), topic_info.message_type.c_str());
+        RCLCPP_INFO(node_->get_logger(), "Setting up publisher for topic: %s  message type: %s", topic_info.topic_name.c_str(), topic_info.message_type.c_str());
 
         PublisherPtr pub(new Publisher(node_, topic_info));
         callbacks_[topic_info.topic_id] = std::bind(&Publisher::handle, pub, std::placeholders::_1);
@@ -515,7 +515,7 @@ private:
     rclcpp::Serialization<rosserial_msgs::msg::TopicInfo> serializer;
     serializer.deserialize_message(&serialized_msg, &topic_info);
 
-    RCLCPP_INFO(node_->get_logger(), "[Rosserial::Session::setup_subscriber] Setting up subscriber to topic: %s  message type: %s", topic_info.topic_name.c_str(), topic_info.message_type.c_str());
+    RCLCPP_INFO(node_->get_logger(), "Setting up subscriber to topic: %s  message type: %s", topic_info.topic_name.c_str(), topic_info.message_type.c_str());
 
     try
     {
@@ -525,7 +525,7 @@ private:
     }
     catch(const std::exception& e)
     {
-      RCLCPP_ERROR(node_->get_logger(), "[Rosserial::Session::setup_subscriber] Setting up subscriber to topic failed: %s  message type: %s", topic_info.topic_name.c_str(), topic_info.message_type.c_str());
+      RCLCPP_ERROR(node_->get_logger(), "Setting up subscriber to topic failed: %s  message type: %s", topic_info.topic_name.c_str(), topic_info.message_type.c_str());
     }
 
 
@@ -546,7 +546,7 @@ private:
 
     if (!service_clients_.count(topic_info.topic_name))
     {
-        RCLCPP_DEBUG(node_->get_logger(), "[Rosserial::Session::setup_service_client_publisher] Creating service client for topic %s",topic_info.topic_name.c_str());
+        RCLCPP_DEBUG(node_->get_logger(), "Creating service client for topic %s",topic_info.topic_name.c_str());
         ServiceClientPtr srv(new ServiceClient(
             node_,topic_info,boost::bind(&Session::write_message, this, boost::placeholders::_1, boost::placeholders::_2), services_map_));
         service_clients_[topic_info.topic_name] = srv;
@@ -557,9 +557,9 @@ private:
     std::string hostHash = service_clients_[topic_info.topic_name]->getRequestMessageMD5();
     if (hostHash != topic_info.md5sum)
     {
-        RCLCPP_WARN(node_->get_logger(), "[Rosserial::Session::setup_service_client_publisher] Service client setup: Request message MD5 mismatch between rosserial client and ROS: %s\nhost:%s\nembedded:%s", topic_info.topic_name.c_str(), hostHash.c_str(), topic_info.md5sum.c_str());
+        RCLCPP_WARN(node_->get_logger(), "Service client setup: Request message MD5 mismatch between rosserial client and ROS: %s\nhost:%s\nembedded:%s", topic_info.topic_name.c_str(), hostHash.c_str(), topic_info.md5sum.c_str());
     } else {
-        RCLCPP_DEBUG(node_->get_logger(), "[Rosserial::Session::setup_service_client_publisher] Service client %s: request message MD5 successfully validated as %s",
+        RCLCPP_DEBUG(node_->get_logger(), "Service client %s: request message MD5 successfully validated as %s",
             topic_info.topic_name.c_str(),topic_info.md5sum.c_str());
     }
 
@@ -574,7 +574,7 @@ private:
 
 
     if (!service_clients_.count(topic_info.topic_name)) {
-      RCLCPP_DEBUG(node_->get_logger(), "[Rosserial::Session::setup_service_client_subscriber] Creating service client for topic %s",topic_info.topic_name.c_str());
+      RCLCPP_DEBUG(node_->get_logger(), "Creating service client for topic %s",topic_info.topic_name.c_str());
       ServiceClientPtr srv(new ServiceClient(
         node_,topic_info,boost::bind(&Session::write_message, this, boost::placeholders::_1, boost::placeholders::_2), services_map_));
       service_clients_[topic_info.topic_name] = srv;
@@ -584,9 +584,9 @@ private:
     // see above comment regarding the service client callback for why we set topic_id here
     service_clients_[topic_info.topic_name]->setTopicId(topic_info.topic_id);
     if (service_clients_[topic_info.topic_name]->getResponseMessageMD5() != topic_info.md5sum) {
-      RCLCPP_WARN(node_->get_logger(), "[Rosserial::Session::setup_service_client_subscriber] Service client setup: Response message MD5 mismatch between rosserial client and ROS: %s", topic_info.topic_name.c_str());
+      RCLCPP_WARN(node_->get_logger(), "Service client setup: Response message MD5 mismatch between rosserial client and ROS: %s", topic_info.topic_name.c_str());
     } else {
-      RCLCPP_DEBUG(node_->get_logger(), "[Rosserial::Session::setup_service_client_subscriber] Service client %s: response message MD5 successfully validated as %s",
+      RCLCPP_DEBUG(node_->get_logger(), "Service client %s: response message MD5 successfully validated as %s",
         topic_info.topic_name.c_str(),topic_info.md5sum.c_str());
     }
     set_sync_timeout(timeout_interval_);
@@ -601,17 +601,17 @@ private:
     serializer.deserialize_message(&serialized_msg, &topic_info);
 
     if (!service_servers_.count(topic_info.topic_name)) {
-      RCLCPP_INFO(node_->get_logger(), "[Rosserial::Session::setup_service_server_publisher] Creating service server publisher for topic %s",topic_info.topic_name.c_str());
+      RCLCPP_INFO(node_->get_logger(), "Creating service server publisher for topic %s",topic_info.topic_name.c_str());
       ServiceServerPtr srv(new ServiceServer(node_, topic_info, buffer_max, boost::bind(&Session::write_message, this, boost::placeholders::_1, boost::placeholders::_2), services_no_response_timeout_ms_, services_map_));
       service_servers_[topic_info.topic_name] = srv;
       callbacks_[topic_info.topic_id] = std::bind(&ServiceServer::response_handle, srv, std::placeholders::_1);
       topics_names_[topic_info.topic_id] = topic_info.topic_name;
     }
     if (service_servers_[topic_info.topic_name]->getResponseMessageMD5() != topic_info.md5sum) {
-      RCLCPP_WARN(node_->get_logger(), "[Rosserial::Session::setup_service_server_publisher] Service server setup: Response message MD5 mismatch between rosserial server and ROS: %s", topic_info.topic_name.c_str());
+      RCLCPP_WARN(node_->get_logger(), "Service server setup: Response message MD5 mismatch between rosserial server and ROS: %s", topic_info.topic_name.c_str());
       RCLCPP_WARN(node_->get_logger(), "%s  and %s", service_servers_[topic_info.topic_name]->getResponseMessageMD5().c_str(), topic_info.md5sum.c_str());
     } else {
-      RCLCPP_DEBUG(node_->get_logger(), "[Rosserial::Session::setup_service_server_publisher] Service server %s: response message MD5 successfully validated as %s",
+      RCLCPP_DEBUG(node_->get_logger(), "Service server %s: response message MD5 successfully validated as %s",
                topic_info.topic_name.c_str(),topic_info.md5sum.c_str());
     }
     set_sync_timeout(timeout_interval_);
@@ -624,7 +624,7 @@ private:
     serializer.deserialize_message(&serialized_msg, &topic_info);
 
     if (!service_servers_.count(topic_info.topic_name)) {
-      RCLCPP_INFO(node_->get_logger(), "[Rosserial::Session::setup_service_server_subscriber] Creating service server subscriber for topic %s",topic_info.topic_name.c_str());
+      RCLCPP_INFO(node_->get_logger(), "Creating service server subscriber for topic %s",topic_info.topic_name.c_str());
       ServiceServerPtr srv(new ServiceServer(node_, topic_info, buffer_max, boost::bind(&Session::write_message, this, boost::placeholders::_1, boost::placeholders::_2), services_no_response_timeout_ms_, services_map_));
       service_servers_[topic_info.topic_name] = srv;
       callbacks_[topic_info.topic_id] = std::bind(&ServiceServer::response_handle, srv, std::placeholders::_1);
@@ -634,10 +634,10 @@ private:
     // see above comment regarding the service server callback for why we set topic_id here
     service_servers_[topic_info.topic_name]->setTopicId(topic_info.topic_id);
     if (service_servers_[topic_info.topic_name]->getRequestMessageMD5() != topic_info.md5sum) {
-      RCLCPP_WARN(node_->get_logger(), "[Rosserial::Session::setup_service_server_subscriber] Service server setup: Request message MD5 mismatch between rosserial server and ROS: %s", topic_info.topic_name.c_str());
+      RCLCPP_WARN(node_->get_logger(), "Service server setup: Request message MD5 mismatch between rosserial server and ROS: %s", topic_info.topic_name.c_str());
       RCLCPP_WARN(node_->get_logger(), "%s  and %s", service_servers_[topic_info.topic_name]->getRequestMessageMD5().c_str(), topic_info.md5sum.c_str());
     } else {
-      RCLCPP_INFO(node_->get_logger(), "[Rosserial::Session::setup_service_server_subscriber] Service server %s: request message MD5 successfully validated as %s",
+      RCLCPP_DEBUG(node_->get_logger(), "Service server %s: request message MD5 successfully validated as %s",
                topic_info.topic_name.c_str(),topic_info.md5sum.c_str());
     }
     set_sync_timeout(timeout_interval_);
