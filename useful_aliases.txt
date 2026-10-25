@@ -1,2 +1,2 @@
 alias colcon_build='colcon build --event-handlers console_direct+'
-
+alias start_zenoh='ros2 run rmw_zenoh_cpp rmw_zenohd'
